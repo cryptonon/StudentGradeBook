@@ -5,6 +5,8 @@ This is a simple implementation of Student's GradeBook Database. The source code
 * Change the weights of the assignment types for a course.
 * Add 2 points to the score of each student on an assignment.
 * Add 2 points just to those students whose last name contains a ‘Q’.
+* Compute the grade for a student in a given course.
+* Compute the grade for a student in a given course, where the lowest score for the given assignment type is dropped.
 
 #### Executing the Code
 The implementaion is in PL/pgSQL 12.1. So, to execute the queries, we need to connect to PostgreSQL. We can use SQLPro Studio, connect to PostgreSQL after installing it and run the queries.
