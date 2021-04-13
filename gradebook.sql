@@ -364,3 +364,90 @@ The result is expected. Hence, we validate the correctness of this function.
 */
 
 /********************* END of add two points Q  *********************/
+
+
+
+/********************* Compute STUDENT's grade in a given COURSE  *********************/
+
+-- Creating a function
+CREATE OR REPLACE FUNCTION getGrade(StuID int, CourseNum int)
+RETURNS TABLE(grade numeric) AS $$
+BEGIN
+	RETURN QUERY
+	SELECT SUM(average*GRADE_WEIGHT/100) as grade
+	FROM (
+	SELECT CRS_ASSIGNMENT.ASSIGN_TYPE_ID, AVG(CRS_ASSIGNMENT.ASSIGNMENT_SCORE) as average
+	FROM CRS_ASSIGNMENT
+	WHERE CRS_NUM = CourseNum AND STU_ID = StuID GROUP BY ASSIGN_TYPE_ID) assignments
+	INNER JOIN 
+	(SELECT ASSIGNMENT_WEIGHT.ASSIGN_TYPE_ID, ASSIGNMENT_WEIGHT.GRADE_WEIGHT 
+	FROM ASSIGNMENT_WEIGHT 
+	WHERE CRS_NUM = CourseNum
+	GROUP BY ASSIGN_TYPE_ID, GRADE_WEIGHT) weights
+	
+	ON assignments.ASSIGN_TYPE_ID = weights.ASSIGN_TYPE_ID;
+END
+$$ LANGUAGE plpgsql;
+
+-- Calling the function
+--SELECT getGrade(15, 11111) as grade;
+
+-- Test for getGrade(15, 11111)
+/* 
+Student 15 in Course 11111 has two five assignments, 3 (40, 90, 95) for Type ID 1,
+and each for Type ID 2 and 3 (90 and 95) respectively. The weights for 11111's assignment are as:
+Type 1 -> 15, Type 2 -> 50, Type 3 -> 35. So the expected grade is:
+(40 + 90 +95) * 0.05 + 90 * 0.5 + 95 * 0.35 = 89.5
+The result is expected. Hence, we validate the correctness of this function.
+*/
+
+/********************* END of compute grade  *********************/
+
+
+
+/********************* Compute STUDENT's grade in a given COURSE after dropping min *********************/
+
+-- Creating a function
+CREATE OR REPLACE FUNCTION getGradeAfterMinDrop(StuID int, CourseNum int, DropTypeID int)
+RETURNS TABLE(grade numeric) AS $$
+BEGIN
+	RETURN QUERY
+	SELECT SUM(average*GRADE_WEIGHT/100) as grade
+	FROM (
+	SELECT ASSIGN_TYPE_ID, AVG(assignment_score) as average  FROM(
+	(SELECT CRS_ASSIGNMENT.ASSIGN_TYPE_ID, ASSIGNMENT_SCORE
+	FROM CRS_ASSIGNMENT
+	WHERE CRS_NUM = CourseNum AND STU_ID = StuID GROUP BY ASSIGN_TYPE_ID, ASSIGNMENT_SCORE)
+	EXCEPT
+	(SELECT CRS_ASSIGNMENT.ASSIGN_TYPE_ID, MIN(CRS_ASSIGNMENT.ASSIGNMENT_SCORE)
+	FROM CRS_ASSIGNMENT
+	WHERE CRS_NUM = CourseNum AND STU_ID = StuID AND ASSIGN_TYPE_ID = DropTypeID
+	GROUP BY ASSIGN_TYPE_ID, ASSIGNMENT_SCORE
+	FETCH FIRST 1 ROW ONLY)
+	) nongrouped GROUP BY ASSIGN_TYPE_ID) assignments
+	
+	INNER JOIN 
+	
+	(SELECT ASSIGNMENT_WEIGHT.ASSIGN_TYPE_ID, ASSIGNMENT_WEIGHT.GRADE_WEIGHT 
+	FROM ASSIGNMENT_WEIGHT 
+	WHERE CRS_NUM = CourseNum
+	GROUP BY ASSIGN_TYPE_ID, GRADE_WEIGHT) weights
+	
+	ON assignments.ASSIGN_TYPE_ID = weights.ASSIGN_TYPE_ID;
+END
+$$ LANGUAGE plpgsql;
+
+-- Calling the function
+--SELECT getGradeAfterMinDrop(15, 11111, 1) as gradeAfterDrop;
+
+-- Test for getGradeAfterMinDrop(15, 11111, 1)
+/* 
+Student 15 in Course 11111 has two five assignments, 3 (40, 90, 95) for Type ID 1,
+and each for Type ID 2 and 3 (90 and 95) respectively. The weights for 11111's assignment are as:
+Type 1 -> 15, Type 2 -> 50, Type 3 -> 35. Now, here we drop the min for Type 1 i.e. 40.
+So the expected grade is:
+(90 +95) * 0.075 + 90 * 0.5 + 95 * 0.35 = 92.125
+The result is expected. Hence, we validate the correctness of this function.
+*/
+
+/********************* END of compute grade after min drop *********************/
